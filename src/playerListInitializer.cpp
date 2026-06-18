@@ -25,12 +25,9 @@ m_server(t_server)
 
 PlayerListInitializer::~PlayerListInitializer(){
 
-    for(auto& th : m_clienthandleThreads){
-        if(th.joinable()){
-            th.join();
-        }
+    if(!haveEnoughPlayers()){
+        updateHaveEnoughPlayers(true);
     }
-
 
     if(m_acceptThread.joinable()){
         m_acceptThread.join();
@@ -47,7 +44,17 @@ void PlayerListInitializer::connectToClients(){
 
     do{
 
-        kissnet::tcp_socket client_socket = server_listening_socket.accept();
+        server_listening_socket.set_non_blocking();
+        kissnet::tcp_socket client_socket;
+
+        while (!haveEnoughPlayers()) {
+            client_socket = server_listening_socket.accept();
+            std::this_thread::sleep_for(std::chrono::milliseconds(RECV_POLL_DELAY_MS));
+        }
+
+        if(haveEnoughPlayers()){
+            break;
+        }        
 
               
         // Start thread for this client
