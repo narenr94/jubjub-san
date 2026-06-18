@@ -114,7 +114,7 @@ std::string JubjubServer::getServerIp() const{
 }
 
 
-unsigned short int JubjubServer::currInitPlayers(){
+unsigned short int JubjubServer::currInitPlayersCount(){
 
     std::lock_guard<std::mutex> lock (m_serverAccessMutex);
 

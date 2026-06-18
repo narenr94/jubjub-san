@@ -25,6 +25,7 @@ void logprintf(const char* file, const char* func, int line, const std::string& 
     printStr += " ";
     printStr += t_text;
 
-    std::cerr << printStr << std::endl; 
+    std::cerr << printStr << std::endl;
+    std::cerr.flush();
 
 }

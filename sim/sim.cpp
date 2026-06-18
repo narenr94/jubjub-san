@@ -6,5 +6,9 @@ int main(){
 
     server->initialize();
 
+    while(true){
+        
+    }
+
     return 0;
 }

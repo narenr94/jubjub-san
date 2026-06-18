@@ -39,8 +39,19 @@ PlayerListInitializer::~PlayerListInitializer(){
 void PlayerListInitializer::connectToClients(){
 
     kissnet::tcp_socket server_listening_socket({"0.0.0.0", DEFAULT_SERVER_DISCOVERY_PORT});
-    server_listening_socket.bind();
-    server_listening_socket.listen();
+
+    try {        
+        server_listening_socket.bind();
+        server_listening_socket.listen();
+    }catch (const std::exception& e) {
+        JUBJUB_LOG( "Server setup failed: " + std::string(e.what()) );
+        // Handle the error gracefully instead of crashing
+        return;
+    }
+
+    JUBJUB_LOG("Server activing looking for clients to connect to!!!");
+
+    unsigned short int clientCount = 0;
 
     do{
 
@@ -48,8 +59,17 @@ void PlayerListInitializer::connectToClients(){
         kissnet::tcp_socket client_socket;
 
         while (!haveEnoughPlayers()) {
-            client_socket = server_listening_socket.accept();
-            std::this_thread::sleep_for(std::chrono::milliseconds(RECV_POLL_DELAY_MS));
+            kissnet::tcp_socket temp_client_socket = server_listening_socket.accept();
+
+            if (temp_client_socket.is_valid()){
+                temp_client_socket.set_non_blocking();
+                client_socket = std::move(temp_client_socket);
+                break;
+            }
+            else{
+                std::this_thread::sleep_for(std::chrono::milliseconds(RECV_POLL_DELAY_MS));
+            }
+            
         }
 
         if(haveEnoughPlayers()){
@@ -59,6 +79,13 @@ void PlayerListInitializer::connectToClients(){
               
         // Start thread for this client
         m_clienthandleThreads.emplace_back(&PlayerListInitializer::handleClient, this, std::move(client_socket));
+
+        clientCount++;
+
+        if(clientCount >= m_maxPlayers){
+            //each client ought to represent a min of 1 player
+            break;
+        }
 
     }while(!haveEnoughPlayers());
     
@@ -74,18 +101,21 @@ bool PlayerListInitializer::processReceivedPlayerListData(std::vector<std::strin
     }
 
     std::string rcvd_str = std::string(reinterpret_cast<char*>(receivedData.data.data()), receivedData.size);
-    json rcvd_j(rcvd_str);
+    
+    JUBJUB_LOG("Parsing:" + rcvd_str);
+    
+    json rcvd_j = json::parse(rcvd_str);
 
     if(rcvd_j.contains("player_list")){
         if(rcvd_j["player_list"].is_array()){
             size_pl = rcvd_j["player_list"].size();
         }
         else{
-            throw std::runtime_error("received unexpected format!!!");
+            return false;
         }
     }
     else{
-        throw std::runtime_error("required key:player_list, not found!!!");
+        return false;
     }
 
     if(size_pl <= availableSlots){
@@ -124,6 +154,9 @@ unsigned short int PlayerListInitializer::slotsAvailable(){
 }
 
 void PlayerListInitializer::handleClient(kissnet::tcp_socket t_clientSocket) {
+
+    JUBJUB_LOG("Connected to a client!!!");
+
     json j;
     std::vector<std::string> plList;
 
@@ -143,10 +176,16 @@ void PlayerListInitializer::handleClient(kissnet::tcp_socket t_clientSocket) {
 
         std::array<std::byte, RECV_BUFFER_SIZE> receiveBuffer;
         unsigned int bytes_received = 0;
-        t_clientSocket.set_non_blocking(); 
-
+        
         while (!haveEnoughPlayers()) {
             auto [recv_bytes, rcv_status] = t_clientSocket.recv(receiveBuffer);
+            JUBJUB_LOG("recv_bytes=" + std::to_string(recv_bytes) + " status=" + std::to_string(static_cast<int>(rcv_status)));
+
+            // Todo : below doesnt work need a way to detect disconnect
+            // if(rcv_status != kissnet::socket_status::valid){
+            //     JUBJUB_LOG("Client connection no longer valid!!!");
+            //     return;
+            // }
             if (recv_bytes) {
                 bytes_received = recv_bytes;
                 break;
