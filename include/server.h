@@ -47,6 +47,10 @@ class JubjubServer{
 
         unsigned short int currInitPlayersCount();
 
+        std::vector<std::string> getAllPlayersNames();
+
+        unsigned short int getMaxPlayersCount();
+
 };
 
 

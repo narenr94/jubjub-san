@@ -128,3 +128,31 @@ unsigned short int JubjubServer::currInitPlayersCount(){
     }
 
 }
+
+std::vector<std::string> JubjubServer::getAllPlayersNames(){
+
+    std::lock_guard<std::mutex> lock (m_serverAccessMutex);
+
+    std::vector<std::string> ret;
+
+    if((!m_initComplete) && m_plInit){
+        
+        ret = m_plInit->getCopyOfRegisteredPlayerNames();
+
+    }
+    else{
+        for(auto& pl : m_playerSocketMapVector){
+            for(auto& nm : pl.playerNameVector){
+                ret.push_back(nm);
+            }
+        }
+    }
+
+    return ret;
+
+
+}
+
+unsigned short int JubjubServer::getMaxPlayersCount(){
+    return m_maxPlayerCount;
+}

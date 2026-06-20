@@ -6,6 +6,7 @@
 #include <mutex>
 #include <vector>
 #include <thread>
+#include <string>
 
 class JubjubServer;
 struct rcvDataStruct;
@@ -60,6 +61,8 @@ class PlayerListInitializer{
         bool haveEnoughPlayers();
 
         void updateHaveEnoughPlayers(bool t_val);
+
+        std::vector<std::string> getCopyOfRegisteredPlayerNames();
 
 };
 

@@ -291,3 +291,19 @@ std::vector<PlayersSocketMap> PlayerListInitializer::extractList(){
     std::lock_guard<std::mutex> lock(m_fillSlotsMutex);
     return std::move(m_playerList);
 }
+
+std::vector<std::string> PlayerListInitializer::getCopyOfRegisteredPlayerNames(){
+
+    std::lock_guard<std::mutex> lock(m_fillSlotsMutex);
+
+    std::vector<std::string> ret;
+
+    for(auto& pl : m_playerList){
+        for(auto& nm : pl.playerNameVector){
+            ret.push_back(nm);
+        }
+    }
+
+    return ret;
+
+}
